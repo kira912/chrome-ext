@@ -12,6 +12,7 @@ module.exports = {
       filename: 'index.html'
     }
   },
+
   pluginOptions: {
     browserExtension: {
       componentOptions: {
@@ -27,5 +28,9 @@ module.exports = {
         }
       }
     }
-  }
+  },
+
+  transpileDependencies: [
+    'vuetify'
+  ]
 }
