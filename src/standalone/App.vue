@@ -30,8 +30,7 @@ export default {
   data: () => ({
     tab: null,
     tabs: [],
-    tabsRequests: [],
-    requests: []
+    tabsRequests: []
   }),
   methods: {
     handleTab (tabId) {
@@ -39,6 +38,24 @@ export default {
     }
   },
   mounted () {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg.msg === 'getTabId') {
+        sendResponse(sender.tab.id)
+
+        return true
+      }
+
+      if (msg.msg === 'sendRequest') {
+        let tab = this.tabsRequests.find(tab => tab.tabId === msg.tabId)
+        tab.requests.find(request => {
+          msg.allEntriesRequestPage.some(entrieRequest => {
+            if (entrieRequest.name === request.url) {
+              request.timing = entrieRequest
+            }
+          })
+        })
+      }
+    })
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
       this.tab = tabs[0].id
 

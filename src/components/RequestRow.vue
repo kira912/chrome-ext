@@ -55,37 +55,58 @@
             v-for="(request, index) in props.items"
             :key="index"
             @click="displayBottomSheet(request)"
-            
           >
-              <v-col cols="1" class="d-flex justify-start">
-                <v-chip :color="getStatusCodeColor(request.statusCode)">
-                  {{ request.statusCode }}
-                </v-chip>
-              </v-col>
-              <v-col cols="1">
-                <v-chip :color="getMethodColor(request.method)">
-                  <h2>{{ request.method }}</h2>
-                </v-chip>
-              </v-col>
-              <v-col cols="1">
-                <h2>{{ request.type }}</h2>
-              </v-col>
-              <v-col cols="8">
-                <p>{{ request.url }}</p>
-              </v-col>
-              <v-col cols="1" class="d-flex justify-end">
-                <v-icon @click="removeRequestFromList(request)"
-                  >fa-times-circle</v-icon
-                >
-              </v-col>
+            <v-col cols="1" class="d-flex justify-start">
+              <v-chip :color="getStatusCodeColor(request.statusCode)">
+                {{ request.statusCode }}
+              </v-chip>
+            </v-col>
+            <v-col cols="1">
+              <v-chip :color="getMethodColor(request.method)">
+                <h2>{{ request.method }}</h2>
+              </v-chip>
+            </v-col>
+            <v-col cols="2">
+              <h2>{{ request.type }}</h2>
+            </v-col>
+            <v-col cols="6">
+              <p>{{ request.url }}</p>
+            </v-col>
+            <v-col>
+              <p>{{ getRequestDate(request.timeStamp) }}</p>
+            </v-col>
+            <v-col cols="1" class="d-flex justify-end">
+              <v-icon @click="removeRequestFromList(request)"
+                >fa-times-circle</v-icon
+              >
+            </v-col>
           </v-list-item>
-          <v-bottom-sheet 
+          <v-bottom-sheet
             v-if="currentRequestSheet"
             v-model="sheet"
             scrollable
             dark
           >
             <v-sheet class="overflow-auto text-center" fullscreen hide-overlay>
+              <Charts :timing="currentRequestSheet.timing"></Charts>
+                <!-- <v-card>
+                  <v-sparkline
+                    :value="Object.values(getRequestTime())"
+                    smooth="5"
+                    padding="8"
+                    line-width="2"
+                    stroke-linecap="round"
+                    type="trend"
+                    auto-line-width
+                    auto-draw
+                  >
+                    <template v-slot:label="item">
+                      {{ Object.keys(getRequestTime())[item.index] }}
+                    </template>
+                  </v-sparkline>
+                </v-card> -->
+              <v-row>
+              </v-row>
               <v-row>
                 <v-col cols="4">
                   <v-card rounded>
@@ -95,8 +116,9 @@
                       >
                     </v-card-title>
                     <v-list-item
-                      v-for="(requestHeaders,
-                      index) in currentRequestSheet.requestHeaders"
+                      v-for="(
+                        requestHeaders, index
+                      ) in currentRequestSheet.requestHeaders"
                       :key="index"
                     >
                       <v-list-item-content>
@@ -122,8 +144,9 @@
                       >
                     </v-card-title>
                     <v-list-item
-                      v-for="(responseHeader,
-                      index) in currentRequestSheet.responseHeadersReceived"
+                      v-for="(
+                        responseHeader, index
+                      ) in currentRequestSheet.responseHeadersReceived"
                       :key="index"
                     >
                       <v-list-item-content>
@@ -151,8 +174,13 @@
 </template>
 
 <script>
+import Charts from './Charts'
+
 export default {
   name: 'RequestRow',
+  components: {
+    Charts,
+  },
   props: {
     requests: {
       type: Array,
@@ -171,7 +199,16 @@ export default {
     currentRequestHeaderValue: null,
     currentResponseHeadersReceived: null,
     sheet: false,
-    currentRequestSheet: null
+    currentRequestSheet: null,
+
+    width: 2,
+    radius: 10,
+    padding: 8,
+    lineCap: 'round',
+    value: [0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 0],
+    fill: false,
+    type: 'trend',
+    autoLineWidth: false,
   }),
   methods: {
     nextPage () {
@@ -194,11 +231,11 @@ export default {
     },
     getMethodColor (method) {
       const mapping = {
-        'GET': '#61affe',
-        'POST': '#49cc90',
-        'DELETE': '#f93e3e',
-        'PUT': '#fca130',
-        'PATCH': '#fca130'
+        GET: '#61affe',
+        POST: '#49cc90',
+        DELETE: '#f93e3e',
+        PUT: '#fca130',
+        PATCH: '#fca130'
       }
 
       return mapping[method]
@@ -207,9 +244,33 @@ export default {
       this.requests.splice(this.requests.indexOf(request), 1)
     },
     displayBottomSheet (request) {
-      console.log(request)
       this.sheet = !this.sheet
       this.currentRequestSheet = request
+    },
+    getRequestDate (timestamp) {
+      const options = {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false
+      }
+      return new Intl.DateTimeFormat('fr-FR', options).format(
+        new Date(timestamp)
+      )
+    },
+    
+    getResponseTime() {
+
+      return this.currentRequestSheet.timing !== undefined ? this.currentRequestSheet.timing.duration : 0
+      console.log(this.currentRequestSheet)
+      const start = this.currentRequestSheet.timing.responseStart ?? 0
+      const end = this.currentRequestSheet.timing.responseEnd
+      const length = Math.round(end - start);
+      const x = Math.round(start / this.currentRequestSheet.timing.duration * 300);
+      console.log(start, end - length, x)
     }
   },
   computed: {
@@ -217,14 +278,28 @@ export default {
       return Math.ceil(this.requests.length / this.itemsPerPage)
     },
     filteredKeys () {
-      return this.keys.filter(key => key !== 'Name')
+      return this.keys.filter((key) => key !== 'Name')
     }
   },
   mounted () {
     console.log(this.requests)
   }
 }
+
+// set('redirect', t.redirectStart, t.redirectEnd);
+//     set('dns', t.domainLookupStart, t.domainLookupEnd);
+//     set('connect', t.connectStart, t.connectEnd);
+//     set('request', t.requestStart, t.responseStart);
+//     set('response', t.responseStart, t.responseEnd);
+//     set('dom', t.responseEnd, t.domComplete);
+//     set('domParse', t.responseEnd, t.domInteractive);
+//     set('domScripts', t.domInteractive, t.domContentLoadedEventStart);
+//     set('contentLoaded', t.domContentLoadedEventStart, t.domContentLoadedEventEnd);
+//     set('domSubRes', t.domContentLoadedEventEnd, t.domComplete);
+//     set('load', t.loadEventStart, t.loadEventEnd);
 </script>
+
+
 
 <style lang="sass" scoped>
 getColor

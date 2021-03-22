@@ -5,11 +5,11 @@
   "description": "A Vue Browser Extension",
   "default_locale": "en",
   "permissions": [
+    "tabs",
     "activeTab",
     "webRequest",
-    "webRequestBlocking",
-    "<all_urls>",
-    "*://*/*"
+    "storage",
+    "<all_urls>"
   ],
   "icons": {
     "16": "icons/16.png",
@@ -25,12 +25,20 @@
   "content_scripts": [
     {
       "matches":["<all_urls>"],
-      "js": ["js/content-script.js"],
-      "run_at": "document_start"
+      "js": ["js/performance.js"],
+      "permissions": [
+        "tabs",
+        "activeTab",
+        "webRequest",
+        "storage",
+        "<all_urls>"
+      ]
     }
   ],
+  "externally_connectable": {
+    "matches":["http://*.chromium.org/*"]
+  },
   "browser_action": {
-    "default_popup": "popup.html",
     "default_title": "__MSG_extName__",
     "default_icon": {
       "19": "icons/19.png",

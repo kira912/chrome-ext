@@ -21,8 +21,11 @@ module.exports = {
         },
         contentScripts: {
           entries: {
-            'content-script': [
-              'src/content-scripts/content-script.js'
+            performance: [
+              'src/content-scripts/performance.js'
+            ],
+            browserPolyfill: [
+              'src/content-scripts/browser-polyfill.min.js'
             ]
           }
         }
