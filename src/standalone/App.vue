@@ -30,11 +30,39 @@ export default {
   data: () => ({
     tab: null,
     tabs: [],
-    tabsRequests: []
+    tabsRequests: [],
+    beforeRequest: [],
+    sendHeaders: [],
+    headersReceived: [],
+    requestCompleted: [],
+    requests: new Set()
   }),
   methods: {
     handleTab (tabId) {
       this.tab = tabId
+    }
+  },
+  computed: {
+    getTabRequests () {
+      console.log(this.requests)
+      const beforeRequest = this.beforeRequest.find(
+        (el) => el.tabId === this.tab
+      )
+      const sendHeaders = this.sendHeaders.find((el) => el.tabId === this.tab)
+      const headersReceived = this.headersReceived.find(
+        (el) => el.tabId === this.tab
+      )
+      const requestCompleted = this.requestCompleted.find(
+        (el) => el.tabId === this.tab
+      )
+
+      return Object.assign(
+        {},
+        beforeRequest,
+        sendHeaders,
+        headersReceived,
+        requestCompleted
+      )
     }
   },
   mounted () {
@@ -46,9 +74,9 @@ export default {
       }
 
       if (msg.msg === 'sendRequest') {
-        let tab = this.tabsRequests.find(tab => tab.tabId === msg.tabId)
-        tab.requests.find(request => {
-          msg.allEntriesRequestPage.some(entrieRequest => {
+        const tab = this.tabsRequests.find((tab) => tab.tabId === msg.tabId)
+        tab.requests.find((request) => {
+          msg.allEntriesRequestPage.some((entrieRequest) => {
             if (entrieRequest.name === request.url) {
               request.timing = entrieRequest
             }
@@ -65,10 +93,25 @@ export default {
         }
         this.tabsRequests.push({ tabId: tab.id, requests: [] })
       })
+
       chrome.webRequest.onSendHeaders.addListener(
         (details) => {
+          // this.sendHeaders.push(details)
+          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
+              const request = tab.requests.find((request) => {
+                if (details.requestId === request.requestId) {
+                  return request
+                }
+              })
+
+              if (request !== undefined) {
+                request.requestHeaders = details.requestHeaders
+
+                return
+              }
+
               tab.requests.push(details)
             }
           })
@@ -77,8 +120,36 @@ export default {
         ['extraHeaders', 'requestHeaders']
       )
 
+      chrome.webRequest.onBeforeRequest.addListener(
+        (details) => {
+          // this.beforeRequest.push(details)
+          // this.requests.add(details);
+          this.tabsRequests.find((tab) => {
+            if (details.tabId === tab.tabId) {
+              const request = tab.requests.find((request) => {
+                if (details.requestId === request.requestId) {
+                  return request
+                }
+              })
+
+              if (request !== undefined) {
+                request.requestBody = details.requestBody
+
+                return
+              }
+
+              tab.requests.push(details)
+            }
+          })
+        },
+        { urls: ['<all_urls>'] },
+        ['requestBody']
+      )
+
       chrome.webRequest.onHeadersReceived.addListener(
         (details) => {
+          // this.headersReceived.push(details)
+          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               tab.requests.find((request) => {
@@ -96,11 +167,11 @@ export default {
 
       chrome.webRequest.onCompleted.addListener(
         (details) => {
+          // this.requestCompleted.push(details)
+          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               tab.requests.find((request) => {
-                request.extraHeaders = []
-                request.responseHeaders = []
                 if (details.requestId === request.requestId) {
                   request.extraHeaders = details.extraHeaders
                   request.responseHeaders = details.responseHeaders

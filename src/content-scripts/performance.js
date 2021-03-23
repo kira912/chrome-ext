@@ -10,7 +10,7 @@
 
     function startCollect () {
       const timingPage = performance.getEntriesByType('navigation')[0].toJSON()
-      let allEntriesRequestPage = performance.getEntries()
+      const allEntriesRequestPage = performance.getEntries()
       allEntriesRequestPage.shift()
       timingPage.start = performance.requestStart
       delete timingPage.serverTiming
@@ -41,7 +41,7 @@
         var duration = timingPage.duration / 1000
         var precision = (duration >= 100) ? 0 : (duration >= 10 ? 1 : 2)
         var time = duration.toFixed(precision).substring(0, 4)
-        chrome.runtime.sendMessage({msg: 'sendRequest', time: time, timingPage: timingPage, allEntriesRequestPage: allEntriesRequestPage, tabId: tabId })
+        chrome.runtime.sendMessage({ msg: 'sendRequest', time: time, timingPage: timingPage, allEntriesRequestPage: allEntriesRequestPage, tabId: tabId })
       } else {
         setTimeout(startCollect, 100)
       }

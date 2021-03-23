@@ -10,39 +10,44 @@
       hide-default-footer
     >
       <template v-slot:header>
-        <v-toolbar dark color="dark" class="mb-1">
-          <v-text-field
-            v-model="search"
-            clearable
-            flat
-            solo-inverted
-            hide-details
-            label="Search"
-          ></v-text-field>
-          <template v-if="$vuetify.breakpoint.mdAndUp">
-            <v-spacer></v-spacer>
-            <v-select
-              v-model="sortBy"
-              flat
-              solo-inverted
-              hide-details
-              :items="keys"
-              label="Sort by"
-            ></v-select>
-            <v-spacer></v-spacer>
-            <v-btn-toggle v-model="sortDesc" mandatory>
-              <v-btn large depressed :value="false">
-                <v-icon>fa-arrow-up</v-icon>
-              </v-btn>
-              <v-btn large depressed :value="true">
-                <v-icon>fa-arrow-down</v-icon>
-              </v-btn>
-            </v-btn-toggle>
-          </template>
-        </v-toolbar>
+        <v-col>
+          <v-toolbar rounded dark>
+              <v-text-field
+                v-model="search"
+                clearable
+                flat
+                solo-inverted
+                hide-details
+                label="Search"
+              ></v-text-field>
+              <template v-if="$vuetify.breakpoint.mdAndUp">
+                <v-spacer></v-spacer>
+                <v-select
+                  v-model="sortBy"
+                  flat
+                  solo-inverted
+                  hide-details
+                  :items="keys"
+                  label="Sort by"
+                ></v-select>
+                <v-spacer></v-spacer>
+                <v-btn-toggle v-model="sortDesc" mandatory>
+                  <v-btn large depressed :value="false">
+                    <v-icon>fa-arrow-up</v-icon>
+                  </v-btn>
+                  <v-btn large depressed :value="true">
+                    <v-icon>fa-arrow-down</v-icon>
+                  </v-btn>
+                </v-btn-toggle>
+              </template>
+          </v-toolbar>
+          <v-toolbar rounded >
+            <ChipsFilterTypeRequest @typeSelected="handleTypeFilter" />
+          </v-toolbar>
+        </v-col>
       </template>
 
-      <template v-slot:default="props">
+      <template v-slot>
         <v-list
           rounded
           class="mb-5 request"
@@ -52,7 +57,7 @@
           dark
         >
           <v-list-item
-            v-for="(request, index) in props.items"
+            v-for="(request, index) in filterTypes"
             :key="index"
             @click="displayBottomSheet(request)"
           >
@@ -88,27 +93,19 @@
             dark
           >
             <v-sheet class="overflow-auto text-center" fullscreen hide-overlay>
-              <Charts :timing="currentRequestSheet.timing"></Charts>
-                <!-- <v-card>
-                  <v-sparkline
-                    :value="Object.values(getRequestTime())"
-                    smooth="5"
-                    padding="8"
-                    line-width="2"
-                    stroke-linecap="round"
-                    type="trend"
-                    auto-line-width
-                    auto-draw
-                  >
-                    <template v-slot:label="item">
-                      {{ Object.keys(getRequestTime())[item.index] }}
-                    </template>
-                  </v-sparkline>
-                </v-card> -->
+              <!-- <Charts :timing="currentRequestSheet.timing"></Charts> -->
+              <v-row>
+                <RequestInformation
+                  :from="currentRequestSheet.initiator"
+                  :to="currentRequestSheet.url"
+                  :method="currentRequestSheet.method"
+                  :status="currentRequestSheet.statusCode"
+                />
+              </v-row>
               <v-row>
               </v-row>
               <v-row>
-                <v-col cols="4">
+                <v-col elevation="20" cols="4">
                   <v-card rounded>
                     <v-card-title class="grey darken-3">
                       <span class="title font-weight-light"
@@ -151,18 +148,21 @@
                     >
                       <v-list-item-content>
                         <v-row>
-                          <v-col>
+                          <v-col cols="4">
                             <p class="font-weight-bold">
                               {{ responseHeader.name }}
                             </p>
                           </v-col>
-                          <v-col cols="10">
+                          <v-col cols="6">
                             <p>{{ responseHeader.value }}</p>
                           </v-col>
                         </v-row>
                       </v-list-item-content>
                     </v-list-item>
                   </v-card>
+                </v-col>
+                <v-col cols="4">
+                  <RequestBody :requestBody="currentRequestSheet.requestBody" />
                 </v-col>
               </v-row>
             </v-sheet>
@@ -174,12 +174,18 @@
 </template>
 
 <script>
-import Charts from './Charts'
+// import Charts from './Charts'
+import RequestBody from './RequestBody'
+import RequestInformation from './RequestInformation'
+import ChipsFilterTypeRequest from '../components/ChipsFilterTypeRequest'
 
 export default {
   name: 'RequestRow',
   components: {
-    Charts,
+    // Charts,
+    RequestBody,
+    RequestInformation,
+    ChipsFilterTypeRequest
   },
   props: {
     requests: {
@@ -200,15 +206,7 @@ export default {
     currentResponseHeadersReceived: null,
     sheet: false,
     currentRequestSheet: null,
-
-    width: 2,
-    radius: 10,
-    padding: 8,
-    lineCap: 'round',
-    value: [0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 0],
-    fill: false,
-    type: 'trend',
-    autoLineWidth: false,
+    requestTypeFilter: []
   }),
   methods: {
     nextPage () {
@@ -261,16 +259,8 @@ export default {
         new Date(timestamp)
       )
     },
-    
-    getResponseTime() {
-
-      return this.currentRequestSheet.timing !== undefined ? this.currentRequestSheet.timing.duration : 0
-      console.log(this.currentRequestSheet)
-      const start = this.currentRequestSheet.timing.responseStart ?? 0
-      const end = this.currentRequestSheet.timing.responseEnd
-      const length = Math.round(end - start);
-      const x = Math.round(start / this.currentRequestSheet.timing.duration * 300);
-      console.log(start, end - length, x)
+    handleTypeFilter (types) {
+      this.requestTypeFilter = types
     }
   },
   computed: {
@@ -279,27 +269,22 @@ export default {
     },
     filteredKeys () {
       return this.keys.filter((key) => key !== 'Name')
+    },
+    filterTypes () {
+      return this.requests.filter(request => {
+        if (this.requestTypeFilter.length === 0) {
+          return request
+        }
+
+        return this.requestTypeFilter.includes(request.type)
+      })
     }
   },
   mounted () {
     console.log(this.requests)
   }
 }
-
-// set('redirect', t.redirectStart, t.redirectEnd);
-//     set('dns', t.domainLookupStart, t.domainLookupEnd);
-//     set('connect', t.connectStart, t.connectEnd);
-//     set('request', t.requestStart, t.responseStart);
-//     set('response', t.responseStart, t.responseEnd);
-//     set('dom', t.responseEnd, t.domComplete);
-//     set('domParse', t.responseEnd, t.domInteractive);
-//     set('domScripts', t.domInteractive, t.domContentLoadedEventStart);
-//     set('contentLoaded', t.domContentLoadedEventStart, t.domContentLoadedEventEnd);
-//     set('domSubRes', t.domContentLoadedEventEnd, t.domComplete);
-//     set('load', t.loadEventStart, t.loadEventEnd);
 </script>
-
-
 
 <style lang="sass" scoped>
 getColor

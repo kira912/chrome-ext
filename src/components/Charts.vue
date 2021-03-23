@@ -1,11 +1,11 @@
 <template>
    <v-container fluid id="chart">
-    <apexchart 
+    <apexchart
       type="donut"
       :options="chartOptions"
-      :series="Object.values(getRequestTime())"
-      width="70%"
-      height="70%"
+      :series="chartOptions.series"
+      width="90%"
+      height="90%"
     ></apexchart>
   </v-container>
 </template>
@@ -19,104 +19,54 @@ export default {
     }
   },
   data: () => ({
-    chartOptions: {
-      chart: {
-        type: 'donut',
-        width: '10%',
-        height: '10%'
-      },
-      responsive: [{
-        breakpoint: 480,
-        options: {
-          chart: {
-            width: '10%',
-            height: '10%'
-          },
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }]
-    },
+    data: {}
   }),
+  computed: {
+    getData () {
+      this.setDataCharts('redirect', this.timing.redirectStart, this.timing.redirectEnd)
+      this.setDataCharts('dns', this.timing.domainLookupStart, this.timing.domainLookupEnd)
+      this.setDataCharts('connect', this.timing.connectStart, this.timing.connectEnd)
+      this.setDataCharts('request', this.timing.requestStart, this.timing.responseStart)
+      this.setDataCharts('response', this.timing.responseStart, this.timing.responseEnd)
+      this.setDataCharts('dom', this.timing.responseEnd, this.timing.domComplete)
+      this.setDataCharts('domParse', this.timing.responseEnd, this.timing.domInteractive)
+      this.setDataCharts('domScripts', this.timing.domInteractive, this.timing.domContentLoadedEventStart)
+      this.setDataCharts('contentLoaded', this.timing.domContentLoadedEventStart, this.timing.domContentLoadedEventEnd)
+      this.setDataCharts('domSubRes', this.timing.domContentLoadedEventEnd, this.timing.domComplete)
+      this.setDataCharts('load', this.timing.loadEventStart, this.timing.loadEventEnd)
+
+      return this.data
+    },
+    chartOptions: function () {
+      return {
+        labels: Object.keys(this.data),
+        plotOptions: {
+          pie: {
+            donut: {
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Ms',
+                  color: '#373d3f',
+                  formatter: () => {
+                    return Math.round(this.timing.duration)
+                  }
+                }
+              }
+            }
+          }
+        },
+        series: Object.values(this.getData).filter(Boolean)
+      }
+    }
+  },
   methods: {
-    getRequestTime() {
-      let times = {
-        redirect: 0,
-        dns: 0,
-        connect: 0,
-        request: 0,
-        response: 0,
-        dom: 0,
-        domParse: 0,
-        domScripts: 0,
-        contentLoaded: 0,
-        domSubRes: 0,
-        load: 0
-      }
-      const sparkLineValues = []
-      if (this.timing === undefined) {
-        return []
-      }
-
-      const total = this.timing.duration
-
-      if (this.timing.redirectEnd > 0) {
-        const redirectStart = this.timing.redirectStart
-        const redirectEnd = this.timing.redirectEnd
-        const redirectLength = Math.round(redirectEnd - redirectStart)
-        // const x = Math.round(start / total * 300)
-
-        times.redirect = Math.round(redirectLength / total * 300)
-      }
-
-      if (this.timing.domainLookupEnd > 0) {
-        const start = this.timing.domainLookupStart
-        const end = this.timing.domainLookupEnd
-        const length = Math.round(end - start)
-        // const x = Math.round(start / total * 300)
-
-        times.dns = Math.round(length / total * 300)
-      }
-
-      if (this.timing.connectEnd > 0) {
-        const start = this.timing.connectStart
-        const end = this.timing.connectEnd
-        const length = Math.round(end - start)
-        // const x = Math.round(start / total * 300)
-
-        times.connect = Math.round(length / total * 300)
-      }
-
-      if (this.timing.requestStart > 0 && this.timing.responseStart > 0) {
-        const start = this.timing.requestStart
-        const end = this.timing.responseStart
-        const length = Math.round(end - start)
-        // const x = Math.round(start / total * 300)
-
-        times.request = Math.round(length / total * 300)
-      }
-
-      if (this.timing.responseEnd > 0) {
-        const start = this.timing.responseStart
-        const end = this.timing.responseEnd
-        const length = Math.round(end - start)
-        // const x = Math.round(start / total * 300)
-
-        times.response = Math.round(length / total * 300)
-      }
-
-      if (this.timing.domComplete > 0 && this.timing.responseEnd > 0) {
-        const start = this.timing.domComplete
-        const end = this.timing.responseEnd
-        const length = Math.round(end - start)
-        // const x = Math.round(start / total * 300)
-
-        times.dom = Math.round(length / total * 300)
-      }
-
-      return times
-      // times.dns = 
+    setDataCharts (type, start, end) {
+      console.log(end - start, end, start, this.timing)
+      // const x = Math.round(start - this.timing.duration)
+      const length = Math.round(end - start)
+      this.data[type] = length
     }
   }
 }
