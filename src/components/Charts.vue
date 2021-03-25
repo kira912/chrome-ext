@@ -1,11 +1,11 @@
 <template>
    <v-container fluid id="chart">
     <apexchart
-      type="donut"
+      type="rangeBar"
       :options="chartOptions"
-      :series="chartOptions.series"
-      width="90%"
-      height="90%"
+      :series="getData"
+      height="350"
+      dark
     ></apexchart>
   </v-container>
 </template>
@@ -16,14 +16,71 @@ export default {
   props: {
     timing: {
       type: Object
+    },
+    time: {
+      type: Number
     }
   },
   data: () => ({
-    data: {}
+    data: {
+      dns: {},
+      connect: {},
+      request: {},
+      response: {},
+      dom: {},
+      domParse: {},
+      domScripts: {},
+      contentLoaded: {},
+      domSubRes: {},
+      load: {}
+    }
   }),
   computed: {
+    chartOptions () {
+      return {
+        chart: {
+          height: 350,
+          type: 'rangeBar'
+        },
+        plotOptions: {
+          bar: {
+            horizontal: true,
+            distributed: true,
+            dataLabels: {
+              hideOverflowingLabels: false
+            }
+          }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: (val, opts) => {
+            const label = opts.w.globals.labels[opts.dataPointIndex]
+            console.log()
+            const line = opts.w.config.series[0].data.find(serie => {
+              return serie.x === label
+            })
+
+            return `${Math.floor(line.y[1] - line.y[0])} ms`
+          },
+          style: {
+            colors: ['#f3f4f5', '#fff']
+          }
+        },
+        xaxis: {
+          type: 'numeric'
+        },
+        yaxis: {
+          show: false
+        },
+        grid: {
+          row: {
+            colors: ['#f3f4f5', '#fff'],
+            opacity: 1
+          }
+        }
+      }
+    },
     getData () {
-      this.setDataCharts('redirect', this.timing.redirectStart, this.timing.redirectEnd)
       this.setDataCharts('dns', this.timing.domainLookupStart, this.timing.domainLookupEnd)
       this.setDataCharts('connect', this.timing.connectStart, this.timing.connectEnd)
       this.setDataCharts('request', this.timing.requestStart, this.timing.responseStart)
@@ -35,38 +92,29 @@ export default {
       this.setDataCharts('domSubRes', this.timing.domContentLoadedEventEnd, this.timing.domComplete)
       this.setDataCharts('load', this.timing.loadEventStart, this.timing.loadEventEnd)
 
-      return this.data
-    },
-    chartOptions: function () {
-      return {
-        labels: Object.keys(this.data),
-        plotOptions: {
-          pie: {
-            donut: {
-              labels: {
-                show: true,
-                total: {
-                  show: true,
-                  label: 'Ms',
-                  color: '#373d3f',
-                  formatter: () => {
-                    return Math.round(this.timing.duration)
-                  }
-                }
-              }
+      const series = [{ data: [] }]
+      for (const key in this.data) {
+        if (Object.hasOwnProperty.call(this.data, key)) {
+          const element = this.data[key]
+          series[0].data.push(
+            {
+              x: key,
+              y: [element.start, element.end]
             }
-          }
-        },
-        series: Object.values(this.getData).filter(Boolean)
+          )
+        }
       }
+
+      return series
     }
   },
   methods: {
+    range (start, end, length = end - start + 1) {
+      return Array.from({ length }, (_, i) => start + i)
+    },
     setDataCharts (type, start, end) {
-      console.log(end - start, end, start, this.timing)
-      // const x = Math.round(start - this.timing.duration)
-      const length = Math.round(end - start)
-      this.data[type] = length
+      this.data[type].start = start
+      this.data[type].end = end
     }
   }
 }

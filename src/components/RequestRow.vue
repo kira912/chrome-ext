@@ -1,7 +1,7 @@
 <template>
   <v-container fluid>
     <v-data-iterator
-      :items="requests"
+      :items="filterTypes"
       :items-per-page.sync="itemsPerPage"
       :page="page"
       :search="search"
@@ -41,71 +41,68 @@
                 </v-btn-toggle>
               </template>
           </v-toolbar>
-          <v-toolbar rounded >
+          <v-toolbar class="d-flex justify-start" rounded>
             <ChipsFilterTypeRequest @typeSelected="handleTypeFilter" />
           </v-toolbar>
         </v-col>
       </template>
 
-      <template v-slot>
-        <v-list
+      <template v-slot:default="props">
+        <TimingNavigation :currentTab="currentTab"></TimingNavigation>
+        <v-expansion-panels
           rounded
           class="mb-5 request"
-          elevation="10"
-          hover
+          multiple
+          focusable
           max-width="100%"
-          dark
         >
-          <v-list-item
-            v-for="(request, index) in filterTypes"
+        <v-card>
+          <v-expansion-panel
+            v-for="(request, index) in props.items"
             :key="index"
             @click="displayBottomSheet(request)"
           >
-            <v-col cols="1" class="d-flex justify-start">
-              <v-chip :color="getStatusCodeColor(request.statusCode)">
-                {{ request.statusCode }}
-              </v-chip>
-            </v-col>
-            <v-col cols="1">
-              <v-chip :color="getMethodColor(request.method)">
-                <h2>{{ request.method }}</h2>
-              </v-chip>
-            </v-col>
-            <v-col cols="2">
-              <h2>{{ request.type }}</h2>
-            </v-col>
-            <v-col cols="6">
-              <p>{{ request.url }}</p>
-            </v-col>
-            <v-col>
-              <p>{{ getRequestDate(request.timeStamp) }}</p>
-            </v-col>
-            <v-col cols="1" class="d-flex justify-end">
-              <v-icon @click="removeRequestFromList(request)"
-                >fa-times-circle</v-icon
-              >
-            </v-col>
-          </v-list-item>
-          <v-bottom-sheet
-            v-if="currentRequestSheet"
-            v-model="sheet"
-            scrollable
-            dark
-          >
-            <v-sheet class="overflow-auto text-center" fullscreen hide-overlay>
-              <!-- <Charts :timing="currentRequestSheet.timing"></Charts> -->
+            <v-expansion-panel-header>
+              <v-col cols="1" class="d-flex justify-start">
+                <v-chip :color="getStatusCodeColor(request.statusCode)">
+                  {{ request.statusCode }}
+                </v-chip>
+              </v-col>
+              <v-col cols="1">
+                <v-chip :color="getMethodColor(request.method)">
+                  <h2>{{ request.method }}</h2>
+                </v-chip>
+              </v-col>
+              <v-col cols="2">
+                <h2>{{ request.type }}</h2>
+              </v-col>
+              <v-col cols="6">
+                <p>{{ request.url }}</p>
+              </v-col>
+              <v-col>
+                <p>{{ getRequestDate(request.timeStamp) }}</p>
+              </v-col>
+              <v-col cols="1" class="d-flex justify-end">
+                <v-icon @click="removeRequestFromList(request)"
+                  >fa-times-circle</v-icon
+                >
+              </v-col>
+            </v-expansion-panel-header>
+            <v-expansion-panel-content class="ma-15">
               <v-row>
+                {{request}}
+                <RequestTimingNavigation :timing="request.timing" />
+              </v-row>
+              <v-row justify="center">
                 <RequestInformation
-                  :from="currentRequestSheet.initiator"
-                  :to="currentRequestSheet.url"
-                  :method="currentRequestSheet.method"
-                  :status="currentRequestSheet.statusCode"
+                  :from="request.initiator"
+                  :to="request.url"
+                  :method="request.method"
+                  :status="request.statusCode"
                 />
               </v-row>
               <v-row>
-              </v-row>
-              <v-row>
-                <v-col elevation="20" cols="4">
+                <v-col cols="4">
                   <v-card rounded>
                     <v-card-title class="grey darken-3">
                       <span class="title font-weight-light"
@@ -115,7 +112,7 @@
                     <v-list-item
                       v-for="(
                         requestHeaders, index
-                      ) in currentRequestSheet.requestHeaders"
+                      ) in request.requestHeaders"
                       :key="index"
                     >
                       <v-list-item-content>
@@ -133,8 +130,9 @@
                     </v-list-item>
                   </v-card>
                 </v-col>
+
                 <v-col cols="4">
-                  <v-card elevation="20" rounded>
+                  <v-card rounded>
                     <v-card-title class="grey darken-3">
                       <span class="title font-weight-light"
                         >Response Headers</span
@@ -143,7 +141,7 @@
                     <v-list-item
                       v-for="(
                         responseHeader, index
-                      ) in currentRequestSheet.responseHeadersReceived"
+                      ) in request.responseHeadersReceived"
                       :key="index"
                     >
                       <v-list-item-content>
@@ -161,36 +159,109 @@
                     </v-list-item>
                   </v-card>
                 </v-col>
-                <v-col cols="4">
-                  <RequestBody :requestBody="currentRequestSheet.requestBody" />
+
+                <v-col cols="4" v-if="request.requestBody">
+                  <v-row>
+                    <RequestBody :requestBody="request.requestBody" />
+                  </v-row>
                 </v-col>
               </v-row>
-            </v-sheet>
-          </v-bottom-sheet>
-        </v-list>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-card>
+        </v-expansion-panels>
+      </template>
+
+      <template v-slot:footer>
+        <v-row
+          class="mt-2"
+          align="center"
+          justify="center"
+        >
+          <span class="grey--text">Items per page</span>
+          <v-menu offset-y>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                dark
+                text
+                color="primary"
+                class="ml-2"
+                v-bind="attrs"
+                v-on="on"
+              >
+                {{ itemsPerPage }}
+                <v-icon>fa-chevron-down</v-icon>
+              </v-btn>
+            </template>
+            <v-list>
+              <v-list-item
+                v-for="(number, index) in itemsPerPageArray"
+                :key="index"
+                @click="updateItemsPerPage(number)"
+              >
+                <v-list-item-title>{{ number }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
+          <v-spacer></v-spacer>
+
+          <span
+            class="mr-4
+            grey--text"
+          >
+            Page {{ page }} of {{ numberOfPages }}
+          </span>
+          <v-btn
+            fab
+            dark
+            color="blue darken-3"
+            class="mr-1"
+            @click="formerPage"
+          >
+            <v-icon>fa-chevron-left</v-icon>
+          </v-btn>
+          <v-btn
+            fab
+            dark
+            color="blue darken-3"
+            class="ml-1"
+            @click="nextPage"
+          >
+            <v-icon>fa-chevron-right</v-icon>
+          </v-btn>
+        </v-row>
       </template>
     </v-data-iterator>
   </v-container>
 </template>
 
 <script>
-// import Charts from './Charts'
-import RequestBody from './RequestBody'
-import RequestInformation from './RequestInformation'
-import ChipsFilterTypeRequest from '../components/ChipsFilterTypeRequest'
+import RequestBody from '@/components/RequestBody'
+import RequestInformation from '@/components/RequestInformation'
+import ChipsFilterTypeRequest from '@/components/ChipsFilterTypeRequest'
+import TimingNavigation from '@/components/TimingNavigation'
+import RequestTimingNavigation from '@/components/RequestTimingNavigation'
 
 export default {
   name: 'RequestRow',
   components: {
-    // Charts,
     RequestBody,
     RequestInformation,
-    ChipsFilterTypeRequest
+    ChipsFilterTypeRequest,
+    TimingNavigation,
+    RequestTimingNavigation
   },
   props: {
     requests: {
       type: Array,
       required: true
+    },
+    timingPage: {
+      type: Object
+    },
+    currentTab: {
+      type: Number
     }
   },
   data: () => ({
@@ -200,7 +271,7 @@ export default {
     sortDesc: false,
     sortBy: '',
     page: 1,
-    itemsPerPage: 50,
+    itemsPerPage: 12,
     keys: ['Method', 'StatusCode', 'IP', 'Date', 'Url', 'Type'],
     currentRequestHeaderValue: null,
     currentResponseHeadersReceived: null,
@@ -279,14 +350,6 @@ export default {
         return this.requestTypeFilter.includes(request.type)
       })
     }
-  },
-  mounted () {
-    console.log(this.requests)
   }
 }
 </script>
-
-<style lang="sass" scoped>
-getColor
-  background-color: #49cc90
-</style>

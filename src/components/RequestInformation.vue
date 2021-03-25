@@ -1,15 +1,15 @@
 <template>
-  <v-card elevation="20" rounded>
+  <v-card rounded>
     <v-card-title class="grey darken-3">
       <span class="title font-weight-light">Request Informations</span>
     </v-card-title>
     <v-list-item
-      v-for="(prop, index) in getData"
+      v-for="(prop, index) in data"
       :key="index"
     >
       <v-list-item-content>
         <v-row>
-          <v-col>
+          <v-col cols="4">
             <p class="font-weight-bold">
               {{prop.name}}
             </p>
@@ -42,16 +42,14 @@ export default {
   data: () => ({
     data: []
   }),
-  method: {
-    getData () {
-      for (const key in this.$props) {
-        if (Object.hasOwnProperty.call(this.$props, key)) {
-          this.data = [...this.data, { name: key, value: this.$props[key] }]
+  mounted () {
+    for (const key in this.$props) {
+      if (Object.hasOwnProperty.call(this.$props, key)) {
+        if (key === 'timing') {
+          continue
         }
+        this.data = [...this.data, { name: key, value: this.$props[key] }]
       }
-      console.log(this.data)
-
-      return this.data
     }
   }
 }

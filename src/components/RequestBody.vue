@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="20" rounded>
+  <v-card rounded>
     <v-card-title class="grey darken-3">
       <span class="title font-weight-light">Request Body</span>
     </v-card-title>
@@ -9,12 +9,12 @@
     >
       <v-list-item-content>
         <v-row>
-          <v-col cols="3">
+          <v-col cols="auto">
             <p class="font-weight-bold">
               {{ body.name }}
             </p>
           </v-col>
-          <v-col cols="5">
+          <v-col cols="auto">
             <p>{{ body.value }}</p>
           </v-col>
         </v-row>

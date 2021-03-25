@@ -12,7 +12,7 @@
           :key="index"
           :value="request.tabId"
         >
-          <RequestRow :requests="request.requests" />
+          <RequestRow :requests="request.requests" :timingPage="timingNavigation" :currentTab="tab" />
         </v-tab-item>
       </v-tabs-items>
     </v-card>
@@ -35,7 +35,7 @@ export default {
     sendHeaders: [],
     headersReceived: [],
     requestCompleted: [],
-    requests: new Set()
+    timingNavigation: {}
   }),
   methods: {
     handleTab (tabId) {
@@ -44,7 +44,6 @@ export default {
   },
   computed: {
     getTabRequests () {
-      console.log(this.requests)
       const beforeRequest = this.beforeRequest.find(
         (el) => el.tabId === this.tab
       )
@@ -65,24 +64,22 @@ export default {
       )
     }
   },
-  mounted () {
+  beforeCreate () {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg.msg === 'getTabId') {
         sendResponse(sender.tab.id)
-
-        return true
       }
 
-      if (msg.msg === 'sendRequest') {
-        const tab = this.tabsRequests.find((tab) => tab.tabId === msg.tabId)
-        tab.requests.find((request) => {
-          msg.allEntriesRequestPage.some((entrieRequest) => {
-            if (entrieRequest.name === request.url) {
-              request.timing = entrieRequest
-            }
-          })
-        })
-      }
+      // if (msg.msg === 'sendRequest') {
+      //   const tab = this.tabsRequests.find((tab) => tab.tabId === msg.tabId)
+      //   tab.requests.find((request) => {
+      //     msg.allEntriesRequestPage.some((entrieRequest) => {
+      //       if (entrieRequest.name === request.url) {
+      //         request.timing = entrieRequest
+      //       }
+      //     })
+      //   })
+      // }
     })
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
       this.tab = tabs[0].id
@@ -96,8 +93,6 @@ export default {
 
       chrome.webRequest.onSendHeaders.addListener(
         (details) => {
-          // this.sendHeaders.push(details)
-          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               const request = tab.requests.find((request) => {
@@ -122,8 +117,6 @@ export default {
 
       chrome.webRequest.onBeforeRequest.addListener(
         (details) => {
-          // this.beforeRequest.push(details)
-          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               const request = tab.requests.find((request) => {
@@ -148,8 +141,6 @@ export default {
 
       chrome.webRequest.onHeadersReceived.addListener(
         (details) => {
-          // this.headersReceived.push(details)
-          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               tab.requests.find((request) => {
@@ -167,8 +158,6 @@ export default {
 
       chrome.webRequest.onCompleted.addListener(
         (details) => {
-          // this.requestCompleted.push(details)
-          // this.requests.add(details);
           this.tabsRequests.find((tab) => {
             if (details.tabId === tab.tabId) {
               tab.requests.find((request) => {
